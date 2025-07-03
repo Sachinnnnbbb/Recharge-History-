@@ -87,6 +87,7 @@
 
       const container = document.getElementById('customerList');
       container.innerHTML = '';
+      const today = new Date();
 
       if (customers.length === 0) {
         container.innerHTML = '<p class="text-center text-gray-500">No customers added yet.</p>';
@@ -94,14 +95,17 @@
       }
 
       customers.forEach(c => {
+        const due = new Date(c.dueDate);
+        const daysLeft = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
         const calledTime = c.calledAt ? `<p class="text-sm text-gray-600 mt-1">📞 Called at ${c.calledAt}</p>` : '';
-
-        const callBtnClass = 'bg-green-600 hover:bg-green-700';
-        const callBtnAction = `tel:${c.number}" onclick="markCalled(${c.id})`;
+        const expiredClass = daysLeft < 1 ? 'text-red-600' : 'text-blue-600';
 
         container.innerHTML += `
-          <div class="bg-white p-4 rounded-xl shadow border">
-            <p class="font-bold text-lg text-blue-600">${c.name}</p>
+          <div class="bg-white p-4 rounded-xl shadow border relative">
+            <div class="absolute top-2 right-2 bg-yellow-200 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-full">
+              ⏳ ${daysLeft} Days Left
+            </div>
+            <p class="font-bold text-lg ${expiredClass}">${c.name}</p>
             <p class="text-sm text-gray-600">📞 ${c.number}</p>
             <p class="text-sm text-gray-600">🔋 Recharge: ${c.rechargeDate}</p>
             <p class="text-sm text-gray-600">📅 Due: ${c.dueDate}</p>
@@ -109,7 +113,7 @@
             ${calledTime || ''}
             <div class="flex gap-2 mt-3 flex-wrap">
               <button onclick="sendIndividual('${c.number}')" class="text-xs px-3 py-1 bg-indigo-600 text-white rounded">📩 Send Link</button>
-              <a href="${callBtnAction}" class="text-xs px-3 py-1 text-white rounded ${callBtnClass}">📞 Call</a>
+              <a href="tel:${c.number}" onclick="markCalled(${c.id})" class="text-xs px-3 py-1 text-white rounded bg-green-600 hover:bg-green-700">📞 Call</a>
               <a href="https://wa.me/91${c.number}?text=Hello%20${encodeURIComponent(c.name)}" target="_blank" class="text-xs px-3 py-1 bg-green-500 text-white rounded">💬 WhatsApp</a>
             </div>
           </div>`;
@@ -131,7 +135,6 @@
       const message = `Recharge_${prmId}`;
       window.open(`https://wa.me/917001170011?text=${encodeURIComponent(message)}`, "_blank");
 
-      // Enable second button
       const secondBtn = document.getElementById("sendNumberBtn");
       secondBtn.classList.remove("opacity-50", "pointer-events-none");
     };
