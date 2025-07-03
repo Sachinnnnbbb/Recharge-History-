@@ -95,12 +95,9 @@
 
       customers.forEach(c => {
         const calledTime = c.calledAt ? `<p class="text-sm text-gray-600 mt-1">📞 Called at ${c.calledAt}</p>` : '';
-        const callBtnClass = c.calledAt
-          ? 'bg-gray-400 pointer-events-none'
-          : 'bg-green-600 hover:bg-green-700';
-        const callBtnAction = c.calledAt
-          ? 'javascript:void(0)'
-          : `tel:${c.number}" onclick="markCalled(${c.id})`;
+
+        const callBtnClass = 'bg-green-600 hover:bg-green-700';
+        const callBtnAction = `tel:${c.number}" onclick="markCalled(${c.id})`;
 
         container.innerHTML += `
           <div class="bg-white p-4 rounded-xl shadow border">
@@ -109,7 +106,7 @@
             <p class="text-sm text-gray-600">🔋 Recharge: ${c.rechargeDate}</p>
             <p class="text-sm text-gray-600">📅 Due: ${c.dueDate}</p>
             <p class="text-sm text-gray-600">📦 Plan: ${c.plan}</p>
-            ${calledTime}
+            ${calledTime || ''}
             <div class="flex gap-2 mt-3 flex-wrap">
               <button onclick="sendIndividual('${c.number}')" class="text-xs px-3 py-1 bg-indigo-600 text-white rounded">📩 Send Link</button>
               <a href="${callBtnAction}" class="text-xs px-3 py-1 text-white rounded ${callBtnClass}">📞 Call</a>
@@ -177,6 +174,12 @@
         alert("Recharge data copied to clipboard.");
       });
     }
+
+    // Persist PRM ID
+    document.getElementById("prmId").value = localStorage.getItem("prmId") || '';
+    document.getElementById("prmId").addEventListener("input", function () {
+      localStorage.setItem("prmId", this.value);
+    });
 
     displayCustomers();
   </script>
