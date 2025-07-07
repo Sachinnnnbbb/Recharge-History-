@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Team Performance Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 p-4 font-sans">
+  <div class="max-w-5xl mx-auto">
+    <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">Team Performance Tracker</h1>
+
+    <!-- Add Member Button -->
+    <div class="text-right mb-4">
+      <button onclick="openMemberModal()" class="bg-blue-600 text-white px-4 py-2 rounded">+ Add Member</button>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div id="memberModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
+      <div class="bg-white p-6 rounded shadow-lg w-full max-w-md">
+        <h2 class="text-xl font-bold mb-4">Add Team Member</h2>
+        <input id="name" type="text" placeholder="Name" class="p-2 border rounded w-full mb-2" />
+        <input id="memberId" type="text" placeholder="ID" class="p-2 border rounded w-full mb-2" />
+        <input id="password" type="text" placeholder="Password" class="p-2 border rounded w-full mb-2" />
+        <input id="locality" type="text" placeholder="Locality" class="p-2 border rounded w-full mb-4" />
+        <div class="flex justify-end gap-2">
+          <button onclick="closeMemberModal()" class="bg-gray-400 text-white px-4 py-2 rounded">Cancel</button>
+          <button onclick="saveMember()" class="bg-blue-600 text-white px-4 py-2 rounded">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Entry Form -->
+    <div class="bg-white p-4 rounded shadow mb-6">
+      <h2 class="text-xl font-semibold mb-2">Add Daily Entry</h2>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <select id="entryMember" class="p-2 border rounded w-full"></select>
+        <input id="entryDate" type="date" class="p-2 border rounded w-full" />
+        <input id="booking" type="number" placeholder="Booking" class="p-2 border rounded w-full" />
+        <input id="kyc" type="number" placeholder="KYC" class="p-2 border rounded w-full" />
+        <input id="recharge" type="number" placeholder="Recharge" class="p-2 border rounded w-full" />
+        <input id="broadband" type="number" placeholder="Broadband" class="p-2 border rounded w-full" />
+      </div>
+      <div class="flex justify-between items-center mt-4">
+        <button onclick="saveEntry()" class="bg-green-600 text-white px-4 py-2 rounded">Save Entry</button>
+        <button onclick="openChartModal()" class="bg-purple-600 text-white px-4 py-2 rounded">Show Chart</button>
+      </div>
+    </div>
+
+    <!-- Report Table -->
+    <div class="bg-white p-4 rounded shadow mb-6">
+      <h2 class="text-xl font-semibold mb-4">Report</h2>
+      <table class="w-full table-auto border">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2 border">Name</th>
+            <th class="p-2 border">Booking</th>
+            <th class="p-2 border">KYC</th>
+            <th class="p-2 border">Recharge</th>
+            <th class="p-2 border">Broadband</th>
+            <th class="p-2 border">Total</th>
+          </tr>
+        </thead>
+        <tbody id="reportTable" class="text-center"></tbody>
+      </table>
+    </div>
+
+    <!-- Chart Modal -->
+    <div id="chartModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
+      <div class="bg-white p-6 rounded shadow-lg w-full max-w-3xl relative">
+        <button onclick="closeChartModal()" class="absolute top-2 right-2 text-red-500 font-bold">✕</button>
+        <h2 class="text-xl font-semibold mb-4">Performance Chart</h2>
+        <canvas id="performanceChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let members = JSON.parse(localStorage.getItem("members") || "[]");
+    let entries = JSON.parse(localStorage.getItem("entries") || "[]");
+
+    function openMemberModal() {
+      document.getElementById("memberModal").classList.remove("hidden");
+      document.getElementById("memberModal").classList.add("flex");
+    }
+
+    function closeMemberModal() {
+      document.getElementById("memberModal").classList.add("hidden");
+    }
+
+    function saveMember() {
+      const name = document.getElementById("name").value.trim();
+      const id = document.getElementById("memberId").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const locality = document.getElementById("locality").value.trim();
+
+      if (!name || !id) return alert("Name and ID are required.");
+      if (members.find(m => m.id === id)) return alert("Member ID already exists!");
+
+      members.push({ name, id, password, locality });
+      localStorage.setItem("members", JSON.stringify(members));
+      updateDropdowns();
+      generateReport();
+      closeMemberModal();
+    }
+
+    function saveEntry() {
+      const id = document.getElementById("entryMember").value;
+      const date = document.getElementById("entryDate").value;
+      const booking = +document.getElementById("booking").value || 0;
+      const kyc = +document.getElementById("kyc").value || 0;
+      const recharge = +document.getElementById("recharge").value || 0;
+      const broadband = +document.getElementById("broadband").value || 0;
+
+      if (!id || !date) return alert("Member and date required");
+
+      entries.push({ id, date, booking, kyc, recharge, broadband });
+      localStorage.setItem("entries", JSON.stringify(entries));
+      generateReport();
+    }
+
+    function updateDropdowns() {
+      const select = document.getElementById("entryMember");
+      select.innerHTML = "";
+      members.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m.id;
+        opt.textContent = `${m.name} (${m.id})`;
+        select.appendChild(opt);
+      });
+    }
+
+    function generateReport() {
+      const table = document.getElementById("reportTable");
+      table.innerHTML = "";
+      members.forEach(m => {
+        const memberEntries = entries.filter(e => e.id === m.id);
+        const totalData = memberEntries.reduce((acc, e) => {
+          acc.booking += e.booking;
+          acc.kyc += e.kyc;
+          acc.recharge += e.recharge;
+          acc.broadband += e.broadband;
+          return acc;
+        }, { booking: 0, kyc: 0, recharge: 0, broadband: 0 });
+
+        const total = totalData.booking + totalData.kyc + totalData.recharge + totalData.broadband;
+
+        table.innerHTML += `
+          <tr>
+            <td class="border p-2">${m.name}</td>
+            <td class="border p-2">${totalData.booking}</td>
+            <td class="border p-2">${totalData.kyc}</td>
+            <td class="border p-2">${totalData.recharge}</td>
+            <td class="border p-2">${totalData.broadband}</td>
+            <td class="border p-2 font-bold">${total}</td>
+          </tr>
+        `;
+      });
+    }
+
+    // Chart Modal Functions
+    function openChartModal() {
+      document.getElementById("chartModal").classList.remove("hidden");
+      document.getElementById("chartModal").classList.add("flex");
+      renderChart();
+    }
+
+    function closeChartModal() {
+      document.getElementById("chartModal").classList.add("hidden");
+    }
+
+    let chartInstance;
+    function renderChart() {
+      const ctx = document.getElementById("performanceChart").getContext("2d");
+
+      const labels = [];
+      const data = [];
+
+      members.forEach(m => {
+        const memberEntries = entries.filter(e => e.id === m.id);
+        const total = memberEntries.reduce((sum, e) =>
+          sum + e.booking + e.kyc + e.recharge + e.broadband, 0);
+        labels.push(m.name);
+        data.push(total);
+      });
+
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: "Total Performance",
+            data,
+            backgroundColor: "#3B82F6",
+            borderColor: "#1D4ED8",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Performance Chart'
+            }
+          }
+        }
+      });
+    }
+
+    updateDropdowns();
+    generateReport();
+  </script>
+</body>
+</html>
